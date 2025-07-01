@@ -5,8 +5,6 @@ import numpy as np
 from midiutil import MIDIFile
 import random
 import time
-from tensorflow import keras
-import os
 
 app = Flask(__name__)
 CORS(app)
@@ -15,13 +13,6 @@ CORS(app)
 
 # now we dont use the history
 history = []
-
-MODEL_PATH = os.path.join('model', 'lstm_model.h5')
-lstm_model = None
-if os.path.exists(MODEL_PATH):
-    lstm_model = keras.models.load_model(MODEL_PATH)
-else:
-    print(f"[WARNING] LSTM model file not found at {MODEL_PATH}. Using random note generation fallback. To enable LSTM, run 'python train_model.py' to train and save the model.")
 
 # --- Generate MIDI from notes ---
 def generate_midi(notes):
@@ -40,32 +31,13 @@ def generate_midi(notes):
     mem_file.seek(0)
     return mem_file
 
-# --- Generate notes with LSTM ---
-def generate_notes_with_lstm(seed_sequence, num_notes):
-    if lstm_model is None:
-        # fallback to random if model not loaded
-        return np.random.randint(60, 72, size=num_notes).tolist()
-    notes = seed_sequence.copy()
-    for _ in range(num_notes - len(seed_sequence)):
-        input_seq = np.array(notes[-32:]).reshape((1, 32, 1))
-        next_note = lstm_model.predict(input_seq, verbose=0)
-        next_note_int = int(np.round(next_note[0, 0]))
-        notes.append(next_note_int)
-    return notes
-
 # --- API Endpoints ---
 @app.route('/generate', methods=['POST'])
 def generate():
     data = request.get_json()
     num_notes = int(data.get('num_notes', 32))
-    use_lstm = data.get('use_lstm', False)
-    if use_lstm and lstm_model is not None:
-        # Use LSTM model
-        seed = np.random.randint(60, 72, size=32).tolist()
-        notes = generate_notes_with_lstm(seed, num_notes)
-    else:
-        # Generate random notes (MIDI note numbers 60-72)
-        notes = np.random.randint(60, 72, size=num_notes).tolist()
+    # Only use random note generation
+    notes = np.random.randint(60, 72, size=num_notes).tolist()
     midi_file = generate_midi(notes)
     # Generate realistic metrics
     r2 = round(random.uniform(0.7, 0.99), 3)
@@ -89,12 +61,7 @@ def generate():
 def generate_json():
     data = request.get_json()
     num_notes = int(data.get('num_notes', 32))
-    use_lstm = data.get('use_lstm', False)
-    if use_lstm and lstm_model is not None:
-        seed = np.random.randint(60, 72, size=32).tolist()
-        notes = generate_notes_with_lstm(seed, num_notes)
-    else:
-        notes = np.random.randint(60, 72, size=num_notes).tolist()
+    notes = np.random.randint(60, 72, size=num_notes).tolist()
     r2 = round(random.uniform(0.7, 0.99), 3)
     mse = round(random.uniform(0.1, 0.5), 3)
     rmse = round(mse ** 0.5, 3)
