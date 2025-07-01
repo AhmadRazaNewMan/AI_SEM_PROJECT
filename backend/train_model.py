@@ -4,6 +4,7 @@ from tensorflow import keras
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_squared_error
 import json
+from model.lstm_utils import build_lstm_model
 
 MODEL_DIR = 'backend/model'
 MODEL_PATH = os.path.join(MODEL_DIR, 'lstm_model.h5')
@@ -21,15 +22,6 @@ def load_and_preprocess_data():
         y = np.random.randint(60, 72, size=(50000, 1))
         print('Generated random dataset (fallback)')
     return X, y
-
-def build_lstm_model(input_shape):
-    model = keras.Sequential([
-        keras.layers.LSTM(128, input_shape=input_shape),
-        keras.layers.Dense(64, activation='relu'),
-        keras.layers.Dense(1)
-    ])
-    model.compile(optimizer='adam', loss='mse')
-    return model
 
 def main():
     os.makedirs(MODEL_DIR, exist_ok=True)
